@@ -3,14 +3,15 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\UpdatePedidoRequest;
 use App\Http\Resources\Pedido as PedidoResource;
+use App\Http\Requests\UpdatePedidoRequest;
 use App\Models\Cliente;
 use App\Models\Pedido;
 use App\Models\Produto;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Validator;
 
-class PedidoController extends Controller
+class PedidoController extends ApiController
 {
     
     public function index($cliente)
@@ -18,17 +19,17 @@ class PedidoController extends Controller
         $client = Cliente::findOrFail($cliente); //Valida se o cliente existe;
 
         $pedidos = Pedido::where('cliente_id', $client->id)->with('produtos')->orderBy('id', 'DESC')->get();
-        return $pedidos;
+        return $this->successResponse($pedidos);
     }
     
     public function store($cliente, Request $request)
     {
         $client = Cliente::findOrFail( $cliente ); 
 
-        //Validar produtos
-        $request->validate([
-            'produtos' => 'required',
-        ]);
+        $validator = $this->validatePedido();
+        if($validator->fails()){
+            return $this->errorResponse($validator->messages(), 422);
+        }
 
         //Filtrar entrada de produtos
         $id_produtos = array_filter(explode(",", trim($request->input('produtos'))));
@@ -44,17 +45,18 @@ class PedidoController extends Controller
                     $pedido->produtos()->attach($produto);
                 }
 
-                return $pedido;
+                return $this->successResponse($pedido,'Pedido Cadastrado', 201);
             }
         }else{
-            return []; //Tratar erro e exibir que algum dos produtos escolhido estava incorreto
+            //return []; //Tratar erro e exibir que algum dos produtos escolhido estava incorreto
+            return $this->errorResponse('Um ou mais códigos de produto infomados são inválidos.', 422);
         }
     }
     
     public function show($id)
     {
         $pedidos = Pedido::where('id', $id)->with(['produtos', 'cliente'])->orderBy('id', 'DESC')->firstOrFail();
-        return $pedidos;
+        return $this->successResponse($pedidos);
     }
 
     public function cancel($cliente, $id)
@@ -68,10 +70,10 @@ class PedidoController extends Controller
             $pedido->status = 'cancelado';
 
             if( $pedido->save() ){
-                return $pedido;
+                return $this->successResponse($pedido,'Pedido cancelado', 201);
             }
         }else{
-            return [];
+            return $this->errorResponse('Você não tem permissão para alterar o pedido', 401);
         }
     }
     
@@ -85,11 +87,11 @@ class PedidoController extends Controller
             
             $pedido->status = $request->status;
 
-            if( $pedido->save() ){
-                return $pedido;
+            if( $pedido->update() ){
+                return $this->successResponse($pedido, 'Pedido Alterado', 204);
             }
         }else{
-            return [];
+            return $this->errorResponse('Você não tem permissão para alterar o pedido', 401);
         }
     }
     
@@ -101,10 +103,17 @@ class PedidoController extends Controller
         //Se o cliente é dono pedido, senão não tem permissão
         if($client->id == $pedido->cliente_id){
             if( $pedido->delete() ){
-                return $pedido;
+                return $this->successResponse(null, 'Pedido removido');
             }
         }else{
-            return [];
+            return $this->errorResponse('Você não tem permissão para alterar o pedido', 401);
         }
+    }
+
+    //Forma mais prática para padronizar mensagens de retorno
+    public function validatePedido(){
+        return Validator::make(request()->all(), [
+            'produtos' => 'required'
+        ]);
     }
 }

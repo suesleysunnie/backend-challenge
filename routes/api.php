@@ -24,16 +24,16 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 
 //Cliente
 Route::get('clientes', [ClienteController::class, 'index']);
-Route::get('clientes/buscar/{contato}', [ClienteController::class, 'buscar']);//Contato pode ser email ou telefone
-Route::delete('cliente/{id}', [ClienteController::class, 'destroy']);
+Route::get('cliente/buscar/{contato}', [ClienteController::class, 'buscar']);//Contato pode ser email ou telefone
 Route::get('cliente/{id}', [ClienteController::class, 'show']);
 Route::post('cliente', [ClienteController::class, 'store']);
 Route::put('cliente/{id}', [ClienteController::class, 'update']);
+Route::delete('cliente/{id}', [ClienteController::class, 'destroy']);
 
 //Pedidos
-Route::get('pedido/cancelar/{cliente}/{id}', [PedidoController::class, 'cancel']);//Cancela o pedido do cliente, rota usada para a api
 Route::get('pedidos/{cliente}', [PedidoController::class, 'index']);
-Route::post('pedido/{cliente}', [PedidoController::class, 'store']);//PRODUTOS, enviar ids numa string separados por vírgula
 Route::get('pedido/{id}', [PedidoController::class, 'show']);  
+Route::get('pedido/cancelar/{cliente}/{id}', [PedidoController::class, 'cancel']);//Cancela o pedido do cliente, rota usada para a api
+Route::post('pedido/{cliente}', [PedidoController::class, 'store']);//PRODUTOS, enviar ids numa string separados por vírgula
 Route::put('pedido/{cliente}/{id}', [PedidoController::class, 'update']);//Passar o campo status, com o status que deseja.
 Route::delete('pedido/{cliente}/{id}', [PedidoController::class,'destroy']);

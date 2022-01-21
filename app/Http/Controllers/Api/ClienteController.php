@@ -7,14 +7,15 @@ use App\Http\Requests\StoreClienteRequest;
 use App\Http\Resources\Cliente as ClienteResource;
 use App\Models\Cliente;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Validator;
 
-class ClienteController extends Controller
+class ClienteController extends ApiController
 {
 
     public function index()
     {
         $clientes = Cliente::all();
-        return ClienteResource::collection($clientes);
+        return $this->successResponse($clientes);
     }
 
     public function buscar($contato)
@@ -26,14 +27,20 @@ class ClienteController extends Controller
         }
 
         if($cliente){
-            return new ClienteResource( $cliente );
+            return $this->successResponse($cliente);
         }else{
-            return [];
+            return $this->successResponse([], 204);
         }
     }
 
-    public function store(StoreClienteRequest $request)
+    public function store(Request $request)
     {
+        $validator = $this->validateCliente();
+
+        if($validator->fails()){
+            return $this->errorResponse($validator->messages(), 422);
+        }
+
         $cliente = new Cliente;
         $cliente->nome = $request->input('nome');
         $cliente->email = $request->input('email');
@@ -41,7 +48,7 @@ class ClienteController extends Controller
         $cliente->endereco = $request->input('endereco');
 
         if( $cliente->save() ){
-            return new ClienteResource( $cliente );
+            return $this->successResponse($cliente,'Cliente cadastrado', 201);
         }
     }
     
@@ -49,28 +56,27 @@ class ClienteController extends Controller
     public function show($id)
     {
         $cliente = Cliente::findOrFail( $id );
-        return new ClienteResource( $cliente );
+        
+        return $this->successResponse($cliente);
     }
 
     
     public function update(Request $request)
     {
-        $request->validate([
-            'nome' => 'required',
-            'email' => 'required|email|unique:clientes,email,'.$request->id,
-            'telefone' => 'required|unique:clientes,telefone,'.$request->id,
-            'endereco' => 'required'
-        ]);
-
         $cliente = Cliente::findOrFail( $request->id );
+        
+        $validator = $this->validateCliente($cliente->id);
+        if($validator->fails()){
+            return $this->errorResponse($validator->messages(), 422);
+        }
+
         $cliente->nome = $request->input('nome');
         $cliente->email = $request->input('email');
         $cliente->telefone = $request->input('telefone');
         $cliente->endereco = $request->input('endereco');
-
-        if( $cliente->save() ){
-            return new ClienteResource( $cliente );
-        }
+        $cliente->save();
+        
+        return $this->successResponse($cliente, 'Cliente alterado', 204);
     }
 
     /**
@@ -84,7 +90,17 @@ class ClienteController extends Controller
         $cliente = Cliente::findOrFail( $id );
 
         if( $cliente->delete() ){
-            return new ClienteResource( $cliente );
+            return $this->successResponse(null, 'Cliente removido');
         }
+    }
+
+    //Forma mais prática para padronizar mensagens de retorno
+    public function validateCliente($id = ''){
+        return Validator::make(request()->all(), [
+            'nome' => 'required',
+            'email' => 'required|email|unique:clientes,email,'.$id,
+            'telefone' => 'required|unique:clientes,telefone,'.$id,
+            'endereco' => 'required'
+        ]);
     }
 }
