@@ -9,6 +9,24 @@ class Pedido extends Model
 {
     use HasFactory;
 
+    /* Scopos */
+    public function scopeCancelado($query){
+        return $query->where('status', 'cancelado');
+    }
+
+    public function scopeEntregue($query){
+        return $query->where('status', 'entregue');
+    }
+
+    public function scopeAtivos($query){
+        return $query->where([
+            ['status', '<>', 'cancelado'],
+            ['status', '<>', 'entregue'],
+        ]);
+    }
+
+    /* //Scopos */
+
     public function cliente(){
         return $this->belongsTo(Cliente::class, 'cliente_id', 'id');
     }
